@@ -195,6 +195,7 @@ func checkUpdate(drivers []DriverInfo, driversInfoPath string, notify Notificati
 	}
 	// ディスプレイドライバの名前が2つとも同じなので、そこに変更がある場合はうまく動かない
 	if len(drivers) > len(driversExisting) { // 新ドライバの追加
+		notify("New driver was added")
 		driversExistingName := make([]string, len(driversExisting))
 		for i := 0; i < len(driversExisting); i++ {
 			driversExistingName[i] = driversExisting[i].Name
@@ -207,6 +208,7 @@ func checkUpdate(drivers []DriverInfo, driversInfoPath string, notify Notificati
 		return writeDriversInfo(driversInfoPath, drivers)
 	}
 	if len(drivers) < len(driversExisting) { // 既存ドライバの削除
+		notify("Existing driver was removed")
 		driversName := make([]string, len(driversExisting))
 		for i := 0; i < len(drivers); i++ {
 			driversName[i] = drivers[i].Name
