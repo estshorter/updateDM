@@ -1,4 +1,4 @@
-updateDM
+# updateDM
 
 Check updates of Asrock DeskMini X300 driver
 
