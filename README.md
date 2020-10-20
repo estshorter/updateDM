@@ -1,6 +1,6 @@
 # updateDM
 
-Check updates of Asrock DeskMini X300 driver
+Check updates of Asrock DeskMini X300 driver by scraping https://www.asrock.com/nettop/AMD/DeskMini%20X300%20Series/index.jp.asp#Download.
 
 ## Usage
 Place the following `configs.json` in the same folder as `updateDM.exe`.
