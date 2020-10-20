@@ -193,6 +193,7 @@ func checkUpdate(drivers []DriverInfo, driversInfoPath string, notify Notificati
 		notify("Created a driver info file as it didn't exist")
 		return writeDriversInfo(driversInfoPath, drivers)
 	}
+	// ディスプレイドライバの名前が2つとも同じなので、そこに変更がある場合はうまく動かない
 	if len(drivers) > len(driversExisting) { // 新ドライバの追加
 		driversExistingName := make([]string, len(driversExisting))
 		for i := 0; i < len(driversExisting); i++ {
