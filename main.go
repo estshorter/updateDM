@@ -122,7 +122,7 @@ func scrape(html io.Reader) ([]DriverInfo, error) {
 		nameVersion := s.Find("td:first-child").Text()
 		posVersionStart := strings.LastIndex(nameVersion, "バージョン:")
 		if posVersionStart <= 0 {
-			errInLambda = errors.New("Version info not found")
+			errInLambda = errors.New("version info not found")
 			return
 		}
 		name := nameVersion[0:posVersionStart]
@@ -173,10 +173,10 @@ func notifyErrorAndExit(err error, notify Notification) {
 	log.Fatalln(err)
 }
 
-func loadHTMLFromFile(cacheFilePath string) (io.Reader, error) {
-	content, err := ioutil.ReadFile(cacheFilePath)
-	return bytes.NewReader(content), err
-}
+// func loadHTMLFromFile(cacheFilePath string) (io.Reader, error) {
+// 	content, err := ioutil.ReadFile(cacheFilePath)
+// 	return bytes.NewReader(content), err
+// }
 
 func contains(target string, list []string) bool {
 	for _, r := range list {
