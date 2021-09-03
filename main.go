@@ -25,12 +25,19 @@ const useLINE = true
 type Configs struct {
 	DriverListURL   string `json:"driverListURL"`
 	DriversInfoPath string `json:"driversInfoPath"`
+	BiosListURL     string `json:"biosListURL"`
+	BiosInfoPath    string `json:"biosInfoPath"`
 	LINENotifyToken string `json:"lineNotifyToken"`
 }
 
 // DriverInfo defines driver infoormation
 type DriverInfo struct {
 	Name      string    `json:"name"`
+	Version   string    `json:"version"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+type BiosInfo struct {
 	Version   string    `json:"version"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
@@ -62,6 +69,18 @@ func readDriversInfo(path string) ([]DriverInfo, error) {
 	return drivers, nil
 }
 
+func readBiosInfo(path string) ([]BiosInfo, error) {
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var biosList []BiosInfo
+	if err := json.Unmarshal(content, &biosList); err != nil {
+		return nil, err
+	}
+	return biosList, nil
+}
+
 func writeDriversInfo(path string, drivers []DriverInfo) error {
 	jsonText, err := json.MarshalIndent(drivers, "", "\t")
 	if err != nil {
@@ -70,7 +89,15 @@ func writeDriversInfo(path string, drivers []DriverInfo) error {
 	return ioutil.WriteFile(path, jsonText, os.ModePerm)
 }
 
-func downloadDriverLists(driverListURL string) (io.Reader, error) {
+func writeBiosInfo(path string, drivers []BiosInfo) error {
+	jsonText, err := json.MarshalIndent(drivers, "", "\t")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(path, jsonText, os.ModePerm)
+}
+
+func downloadPage(driverListURL, key string) (io.Reader, error) {
 	chromeArgs := agouti.ChromeOptions(
 		"args", []string{
 			"--headless",
@@ -91,12 +118,12 @@ func downloadDriverLists(driverListURL string) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Opening the driver list page...")
+	// fmt.Println("Opening the page...")
 	if err := page.Navigate(driverListURL); err != nil {
 		return nil, err
 	}
 	// time.Sleep(time.Millisecond * 500)
-	page.FindByID("Download")
+	page.FindByID(key)
 
 	html, err := page.HTML()
 	if err != nil {
@@ -105,7 +132,15 @@ func downloadDriverLists(driverListURL string) (io.Reader, error) {
 	return bytes.NewReader([]byte(html)), nil
 }
 
-func scrape(html io.Reader) ([]DriverInfo, error) {
+func downloadDriverLists(driverListURL string) (io.Reader, error) {
+	return downloadPage(driverListURL, "download")
+}
+
+func downloadBiosLists(driverListURL string) (io.Reader, error) {
+	return downloadPage(driverListURL, "BIOS")
+}
+
+func scrapeDriverList(html io.Reader) ([]DriverInfo, error) {
 	doc, err := goquery.NewDocumentFromReader(html)
 	if err != nil {
 		return nil, err
@@ -137,6 +172,33 @@ func scrape(html io.Reader) ([]DriverInfo, error) {
 		return nil, err
 	}
 	return drivers, nil
+}
+
+func scrapeBiosList(html io.Reader) ([]BiosInfo, error) {
+	doc, err := goquery.NewDocumentFromReader(html)
+	if err != nil {
+		return nil, err
+	}
+	driverHTML := doc.Find("div#BIOS > table > tbody > tr")
+	if driverHTML.Length() == 0 {
+		return nil, errors.New("scraped result is empty")
+	}
+	biosList := make([]BiosInfo, driverHTML.Length())
+
+	var errInLambda error
+	var updatedAt time.Time
+	driverHTML.Each(func(idx int, s *goquery.Selection) {
+		version := s.Find("td:first-child").Text()
+		updatedAt, errInLambda = time.Parse("2006/1/2", s.Find("td:nth-child(2)").Text())
+		if err != nil {
+			return
+		}
+		biosList[idx] = BiosInfo{version, updatedAt}
+	})
+	if errInLambda != nil {
+		return nil, err
+	}
+	return biosList, nil
 }
 
 func notifyToLINE(msg, token string) error {
@@ -187,7 +249,7 @@ func contains(target string, list []string) bool {
 	return false
 }
 
-func checkUpdate(drivers []DriverInfo, driversInfoPath string, notify Notification) error {
+func checkDriverUpdate(drivers []DriverInfo, driversInfoPath string, notify Notification) error {
 	driversExisting, err := readDriversInfo(driversInfoPath)
 	if err != nil {
 		notify("Created a driver info file as it didn't exist")
@@ -196,12 +258,12 @@ func checkUpdate(drivers []DriverInfo, driversInfoPath string, notify Notificati
 	// ディスプレイドライバの名前が2つとも同じなので、そこに変更がある場合はうまく動かない
 	if len(drivers) > len(driversExisting) { // 新ドライバの追加
 		notify("New driver was added")
-		driversExistingName := make([]string, len(driversExisting))
+		existingNameSet := make(map[string]struct{}, len(driversExisting))
 		for i := 0; i < len(driversExisting); i++ {
-			driversExistingName[i] = driversExisting[i].Name
+			existingNameSet[driversExisting[i].Name] = struct{}{}
 		}
 		for i := 0; i < len(drivers); i++ {
-			if !contains(drivers[i].Name, driversExistingName) {
+			if _, ok := existingNameSet[drivers[i].Name]; !ok {
 				notify(drivers[i].Name + " was added")
 			}
 		}
@@ -209,12 +271,12 @@ func checkUpdate(drivers []DriverInfo, driversInfoPath string, notify Notificati
 	}
 	if len(drivers) < len(driversExisting) { // 既存ドライバの削除
 		notify("Existing driver was removed")
-		driversName := make([]string, len(driversExisting))
+		nameSet := make(map[string]struct{}, len(drivers))
 		for i := 0; i < len(drivers); i++ {
-			driversName[i] = drivers[i].Name
+			nameSet[drivers[i].Name] = struct{}{}
 		}
 		for i := 0; i < len(driversExisting); i++ {
-			if !contains(driversExisting[i].Name, driversName) {
+			if _, ok := nameSet[driversExisting[i].Name]; !ok {
 				notify(driversExisting[i].Name + " was removed")
 			}
 		}
@@ -241,6 +303,60 @@ func checkUpdate(drivers []DriverInfo, driversInfoPath string, notify Notificati
 	return nil
 }
 
+func checkBiosUpdate(biosList []BiosInfo, biosInfoPath string, notify Notification) error {
+	existing, err := readBiosInfo(biosInfoPath)
+	if err != nil {
+		notify("Created a bios info file as it didn't exist")
+		return writeBiosInfo(biosInfoPath, biosList)
+	}
+
+	if len(biosList) > len(existing) { // 新BIOSの追加
+		notify("New driver was added")
+		biosExistingVersionSet := make(map[string]struct{}, len(existing))
+		for i := 0; i < len(existing); i++ {
+			biosExistingVersionSet[existing[i].Version] = struct{}{}
+		}
+		for i := 0; i < len(biosList); i++ {
+			if _, ok := biosExistingVersionSet[biosList[i].Version]; !ok {
+				notify("BIOS " + biosList[i].Version + " was added")
+			}
+		}
+		return writeBiosInfo(biosInfoPath, biosList)
+	}
+	if len(biosList) < len(existing) { // 既存BIOSの削除
+		notify("Existing driver was removed")
+		biosVersionsSet := make(map[string]struct{}, len(existing))
+		for i := 0; i < len(biosList); i++ {
+			biosVersionsSet[biosList[i].Version] = struct{}{}
+		}
+		for i := 0; i < len(existing); i++ {
+			if _, ok := biosVersionsSet[existing[i].Version]; !ok {
+				notify("BIOS " + existing[i].Version + " was removed")
+			}
+		}
+		return writeBiosInfo(biosInfoPath, biosList)
+	}
+
+	// 名前をハッシュ値にして、順番の変更に対応しようかと思ったが、ディスプレイドライバの名前が2つとも同じなので無理。
+	// 順番が変わっていたら、ユーザに通知する仕様にする。
+	updated := false
+	for i := 0; i < len(biosList); i++ {
+		if biosList[i].Version != existing[i].Version { //ドライバの掲載順が変わっていないかチェック
+			notify("Listing order has changed. Some drivers may be added or removed. Please check the website.")
+			notify("Please delete the drivers info json file manually.")
+			return nil // do not overwrite to check which driver got updated
+		} else if biosList[i].UpdatedAt.After(existing[i].UpdatedAt) {
+			updated = true
+			notify("Bios got a newer version: " + biosList[i].Version + " (updated at " + biosList[i].UpdatedAt.Format("2006/01/02") + ")")
+		}
+	}
+	if updated {
+		return writeBiosInfo(biosInfoPath, biosList)
+	}
+	fmt.Println("No updates available")
+	return nil
+}
+
 func main() {
 	var notify Notification
 	var configFilePath string
@@ -258,16 +374,28 @@ func main() {
 
 	notify = func(msg string) error { return notifyToLINE(msg, configs.LINENotifyToken) }
 	fmt.Println("Downloading html...")
-	html, err := downloadDriverLists(configs.DriverListURL)
+	html_drivers, err := downloadDriverLists(configs.DriverListURL)
+	if err != nil {
+		notifyErrorAndExit(err, notify)
+	}
+	html_bios, err := downloadBiosLists(configs.BiosListURL)
 	if err != nil {
 		notifyErrorAndExit(err, notify)
 	}
 	fmt.Println("Scraping html...")
-	drivers, err := scrape(html)
+	drivers, err := scrapeDriverList(html_drivers)
 	if err != nil {
 		notifyErrorAndExit(err, notify)
 	}
-	if err := checkUpdate(drivers, configs.DriversInfoPath, notify); err != nil {
+	if err := checkDriverUpdate(drivers, configs.DriversInfoPath, notify); err != nil {
+		notifyErrorAndExit(err, notify)
+	}
+
+	bioses, err := scrapeBiosList(html_bios)
+	if err != nil {
+		notifyErrorAndExit(err, notify)
+	}
+	if err := checkBiosUpdate(bioses, configs.BiosInfoPath, notify); err != nil {
 		notifyErrorAndExit(err, notify)
 	}
 }
