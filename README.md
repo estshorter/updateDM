@@ -10,7 +10,8 @@ Place the following `configs.json` in the same folder as `updateDM.exe`.
 	"driversInfoPath": "drivers_info.json",
 	"biosListURL":  "https://www.asrock.com/nettop/AMD/DeskMini%20X300%20Series/index.jp.asp#BIOS",
 	"biosInfoPath": "bios_info.json",
-	"lineNotifyToken": "YOUR_LINE_TOKEN"
+	"lineNotifyToken": "YOUR_LINE_TOKEN",
+	"OS": "Windows® 10 64bit"
 }
 ```
 

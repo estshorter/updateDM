@@ -28,6 +28,7 @@ type Configs struct {
 	BiosListURL     string `json:"biosListURL"`
 	BiosInfoPath    string `json:"biosInfoPath"`
 	LINENotifyToken string `json:"lineNotifyToken"`
+	OS              string `json:"OS"`
 }
 
 // DriverInfo defines driver infoormation
@@ -97,7 +98,7 @@ func writeBiosInfo(path string, drivers []BiosInfo) error {
 	return ioutil.WriteFile(path, jsonText, os.ModePerm)
 }
 
-func downloadPage(driverListURL, key string) (io.Reader, error) {
+func downloadPage(driverListURL string) (io.Reader, error) {
 	chromeArgs := agouti.ChromeOptions(
 		"args", []string{
 			"--headless",
@@ -123,7 +124,6 @@ func downloadPage(driverListURL, key string) (io.Reader, error) {
 		return nil, err
 	}
 	// time.Sleep(time.Millisecond * 500)
-	page.FindByID(key)
 
 	html, err := page.HTML()
 	if err != nil {
@@ -133,27 +133,31 @@ func downloadPage(driverListURL, key string) (io.Reader, error) {
 }
 
 func downloadDriverLists(driverListURL string) (io.Reader, error) {
-	return downloadPage(driverListURL, "download")
+	return downloadPage(driverListURL)
 }
 
 func downloadBiosLists(driverListURL string) (io.Reader, error) {
-	return downloadPage(driverListURL, "BIOS")
+	return downloadPage(driverListURL)
 }
 
-func scrapeDriverList(html io.Reader) ([]DriverInfo, error) {
+func scrapeDriverList(html io.Reader, OS string) ([]DriverInfo, error) {
 	doc, err := goquery.NewDocumentFromReader(html)
 	if err != nil {
 		return nil, err
 	}
+	// fmt.Println(doc.Text())
 	driverHTML := doc.Find("div#Download > table > tbody > tr")
 	if driverHTML.Length() == 0 {
 		return nil, errors.New("scraped result is empty")
 	}
-	drivers := make([]DriverInfo, driverHTML.Length())
+	drivers := []DriverInfo{}
 
 	var errInLambda error
 	var updatedAt time.Time
 	driverHTML.Each(func(idx int, s *goquery.Selection) {
+		if s.Find("td:nth-child(2)").Text() != OS {
+			return
+		}
 		nameVersion := s.Find("td:first-child").Text()
 		posVersionStart := strings.LastIndex(nameVersion, "バージョン:")
 		if posVersionStart <= 0 {
@@ -166,7 +170,7 @@ func scrapeDriverList(html io.Reader) ([]DriverInfo, error) {
 		if err != nil {
 			return
 		}
-		drivers[idx] = DriverInfo{name, version, updatedAt}
+		drivers = append(drivers, DriverInfo{name, version, updatedAt})
 	})
 	if errInLambda != nil {
 		return nil, err
@@ -385,7 +389,7 @@ func main() {
 	}
 	fmt.Println("Downloaded BIOS page")
 	fmt.Println("Scraping html...")
-	drivers, err := scrapeDriverList(html_drivers)
+	drivers, err := scrapeDriverList(html_drivers, configs.OS)
 	if err != nil {
 		notifyErrorAndExit(err, notify)
 	}
