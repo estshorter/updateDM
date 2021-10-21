@@ -378,10 +378,12 @@ func main() {
 	if err != nil {
 		notifyErrorAndExit(err, notify)
 	}
+	fmt.Println("Downloaded driver page")
 	html_bios, err := downloadBiosLists(configs.BiosListURL)
 	if err != nil {
 		notifyErrorAndExit(err, notify)
 	}
+	fmt.Println("Downloaded BIOS page")
 	fmt.Println("Scraping html...")
 	drivers, err := scrapeDriverList(html_drivers)
 	if err != nil {
