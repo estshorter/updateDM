@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -47,7 +46,7 @@ type BiosInfo struct {
 type Notification func(string) error
 
 func readConfigs(path string) (*Configs, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +58,7 @@ func readConfigs(path string) (*Configs, error) {
 }
 
 func readDriversInfo(path string) ([]DriverInfo, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +70,7 @@ func readDriversInfo(path string) ([]DriverInfo, error) {
 }
 
 func readBiosInfo(path string) ([]BiosInfo, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +86,7 @@ func writeDriversInfo(path string, drivers []DriverInfo) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path, jsonText, os.ModePerm)
+	return os.WriteFile(path, jsonText, os.ModePerm)
 }
 
 func writeBiosInfo(path string, drivers []BiosInfo) error {
@@ -95,7 +94,7 @@ func writeBiosInfo(path string, drivers []BiosInfo) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path, jsonText, os.ModePerm)
+	return os.WriteFile(path, jsonText, os.ModePerm)
 }
 
 func downloadPage(driverListURL string) (io.Reader, error) {
@@ -240,18 +239,18 @@ func notifyErrorAndExit(err error, notify Notification) {
 }
 
 // func loadHTMLFromFile(cacheFilePath string) (io.Reader, error) {
-// 	content, err := ioutil.ReadFile(cacheFilePath)
+// 	content, err := os.ReadFile(cacheFilePath)
 // 	return bytes.NewReader(content), err
 // }
 
-func contains(target string, list []string) bool {
-	for _, r := range list {
-		if target == r {
-			return true
-		}
-	}
-	return false
-}
+// func contains(target string, list []string) bool {
+// 	for _, r := range list {
+// 		if target == r {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 func checkDriverUpdate(drivers []DriverInfo, driversInfoPath string, notify Notification) error {
 	driversExisting, err := readDriversInfo(driversInfoPath)
