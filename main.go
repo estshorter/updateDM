@@ -291,7 +291,8 @@ func checkDriverUpdate(drivers []DriverInfo, driversInfoPath string, notify Noti
 	updated := false
 	for i := 0; i < len(drivers); i++ {
 		if drivers[i].Name != driversExisting[i].Name { //ドライバの掲載順が変わっていないかチェック
-			notify("Listing order has changed. Some drivers may be added or removed. Please check the website.")
+			notify("[Driver] Version mismatch detected: existing: " + driversExisting[i].Version + ", got: " + drivers[i].Version)
+			notify("[Driver] Listing order has changed. Some drivers may be added or removed. Please check the website.")
 			notify("Please delete the drivers info json file manually.")
 			return nil // do not overwrite to check which driver got updated
 		} else if drivers[i].UpdatedAt.After(driversExisting[i].UpdatedAt) {
@@ -345,7 +346,8 @@ func checkBiosUpdate(biosList []BiosInfo, biosInfoPath string, notify Notificati
 	updated := false
 	for i := 0; i < len(biosList); i++ {
 		if biosList[i].Version != existing[i].Version { //ドライバの掲載順が変わっていないかチェック
-			notify("Listing order has changed. Some drivers may be added or removed. Please check the website.")
+			notify("[Bios] Version mismatch detected: existing: " + existing[i].Version + ", got: " + biosList[i].Version)
+			notify("[Bios] Listing order has changed. Some drivers may be added or removed. Please check the website.")
 			notify("Please delete the drivers info json file manually.")
 			return nil // do not overwrite to check which driver got updated
 		} else if biosList[i].UpdatedAt.After(existing[i].UpdatedAt) {
