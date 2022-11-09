@@ -252,7 +252,7 @@ func notifyErrorAndExit(err error, notify Notification) {
 // 	return false
 // }
 
-func checkDriverUpdate(drivers []DriverInfo, driversInfoPath string, notify Notification) error {
+func checkDriverUpdate(drivers []DriverInfo, driversInfoPath, url string, notify Notification) error {
 	driversExisting, err := readDriversInfo(driversInfoPath)
 	if err != nil {
 		notify("Created a driver info file as it didn't exist")
@@ -270,6 +270,7 @@ func checkDriverUpdate(drivers []DriverInfo, driversInfoPath string, notify Noti
 				notify(drivers[i].Name + " was added")
 			}
 		}
+		notify(url)
 		return writeDriversInfo(driversInfoPath, drivers)
 	}
 	if len(drivers) < len(driversExisting) { // 既存ドライバの削除
@@ -283,6 +284,7 @@ func checkDriverUpdate(drivers []DriverInfo, driversInfoPath string, notify Noti
 				notify(driversExisting[i].Name + " was removed")
 			}
 		}
+		notify(url)
 		return writeDriversInfo(driversInfoPath, drivers)
 	}
 
@@ -294,6 +296,7 @@ func checkDriverUpdate(drivers []DriverInfo, driversInfoPath string, notify Noti
 			notify("[Driver] Version mismatch detected: existing: " + driversExisting[i].Version + ", got: " + drivers[i].Version)
 			notify("[Driver] Listing order has changed. Some drivers may be added or removed. Please check the website.")
 			notify("Please delete the drivers info json file manually.")
+			notify(url)
 			return nil // do not overwrite to check which driver got updated
 		} else if drivers[i].UpdatedAt.After(driversExisting[i].UpdatedAt) {
 			updated = true
@@ -301,13 +304,14 @@ func checkDriverUpdate(drivers []DriverInfo, driversInfoPath string, notify Noti
 		}
 	}
 	if updated {
+		notify(url)
 		return writeDriversInfo(driversInfoPath, drivers)
 	}
 	fmt.Println("No updates available")
 	return nil
 }
 
-func checkBiosUpdate(biosList []BiosInfo, biosInfoPath string, notify Notification) error {
+func checkBiosUpdate(biosList []BiosInfo, biosInfoPath, url string, notify Notification) error {
 	existing, err := readBiosInfo(biosInfoPath)
 	if err != nil {
 		notify("Created a bios info file as it didn't exist")
@@ -325,6 +329,7 @@ func checkBiosUpdate(biosList []BiosInfo, biosInfoPath string, notify Notificati
 				notify("BIOS " + biosList[i].Version + " was added")
 			}
 		}
+		notify(url)
 		return writeBiosInfo(biosInfoPath, biosList)
 	}
 	if len(biosList) < len(existing) { // 既存BIOSの削除
@@ -338,6 +343,7 @@ func checkBiosUpdate(biosList []BiosInfo, biosInfoPath string, notify Notificati
 				notify("BIOS " + existing[i].Version + " was removed")
 			}
 		}
+		notify(url)
 		return writeBiosInfo(biosInfoPath, biosList)
 	}
 
@@ -349,6 +355,7 @@ func checkBiosUpdate(biosList []BiosInfo, biosInfoPath string, notify Notificati
 			notify("[Bios] Version mismatch detected: existing: " + existing[i].Version + ", got: " + biosList[i].Version)
 			notify("[Bios] Listing order has changed. Some bioses may be added or removed. Please check the website.")
 			notify("Please delete the bios info json file manually.")
+			notify(url)
 			return nil // do not overwrite to check which driver got updated
 		} else if biosList[i].UpdatedAt.After(existing[i].UpdatedAt) {
 			updated = true
@@ -356,6 +363,7 @@ func checkBiosUpdate(biosList []BiosInfo, biosInfoPath string, notify Notificati
 		}
 	}
 	if updated {
+		notify(url)
 		return writeBiosInfo(biosInfoPath, biosList)
 	}
 	fmt.Println("No updates available")
@@ -394,7 +402,7 @@ func main() {
 	if err != nil {
 		notifyErrorAndExit(err, notify)
 	}
-	if err := checkDriverUpdate(drivers, configs.DriversInfoPath, notify); err != nil {
+	if err := checkDriverUpdate(drivers, configs.DriversInfoPath, configs.DriverListURL, notify); err != nil {
 		notifyErrorAndExit(err, notify)
 	}
 
@@ -402,7 +410,7 @@ func main() {
 	if err != nil {
 		notifyErrorAndExit(err, notify)
 	}
-	if err := checkBiosUpdate(bioses, configs.BiosInfoPath, notify); err != nil {
+	if err := checkBiosUpdate(bioses, configs.BiosInfoPath, configs.BiosListURL, notify); err != nil {
 		notifyErrorAndExit(err, notify)
 	}
 }
