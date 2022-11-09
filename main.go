@@ -347,8 +347,8 @@ func checkBiosUpdate(biosList []BiosInfo, biosInfoPath string, notify Notificati
 	for i := 0; i < len(biosList); i++ {
 		if biosList[i].Version != existing[i].Version { //ドライバの掲載順が変わっていないかチェック
 			notify("[Bios] Version mismatch detected: existing: " + existing[i].Version + ", got: " + biosList[i].Version)
-			notify("[Bios] Listing order has changed. Some drivers may be added or removed. Please check the website.")
-			notify("Please delete the drivers info json file manually.")
+			notify("[Bios] Listing order has changed. Some bioses may be added or removed. Please check the website.")
+			notify("Please delete the bios info json file manually.")
 			return nil // do not overwrite to check which driver got updated
 		} else if biosList[i].UpdatedAt.After(existing[i].UpdatedAt) {
 			updated = true
