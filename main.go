@@ -153,8 +153,15 @@ func scrapeDriverList(html io.Reader, OS string) ([]DriverInfo, error) {
 
 	var errInLambda error
 	var updatedAt time.Time
+
+	if OS != "Windows® 11 64bit" {
+		return nil, errors.New("invalid os: " + OS)
+	}
+
+	const OS_CLASS = "osW1164"
+
 	driverHTML.Each(func(idx int, s *goquery.Selection) {
-		if s.Find("td:nth-child(2)").Text() != OS {
+		if s.Find("td:nth-child(2) > div."+OS_CLASS).Text() != OS {
 			return
 		}
 		nameVersion := s.Find("td:first-child").Text()
